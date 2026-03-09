@@ -1,0 +1,98 @@
+name: Python (uv) CI
+
+on:
+  workflow_call:
+    inputs:
+      python-version:
+        description: Python version to use
+        required: false
+        type: string
+        default: "3.11"
+      os:
+        description: Runner OS label
+        required: false
+        type: string
+        default: ubuntu-latest
+      rust-toolchain:
+        description: Rust toolchain channel or version
+        required: false
+        type: string
+        default: stable
+      install-rust:
+        description: Install Rust toolchain
+        required: false
+        type: boolean
+        default: false
+      uv-sync-args:
+        description: Args passed to uv sync
+        required: false
+        type: string
+        default: "--all-extras --dev"
+      test-command:
+        description: Command to run tests (via uv run)
+        required: false
+        type: string
+        default: "pytest -q"
+      ruff-check-command:
+        description: Ruff check command (via uv run)
+        required: false
+        type: string
+        default: "ruff check ."
+      ruff-format-command:
+        description: Ruff format check command (via uv run)
+        required: false
+        type: string
+        default: "ruff format --check ."
+      mypy-command:
+        description: Mypy command (via uv run). Empty disables.
+        required: false
+        type: string
+        default: "mypy ."
+
+    secrets:
+      CHECKOUT_TOKEN:
+        description: Token used for checkout and extra checkouts
+        required: false
+
+jobs:
+  ci:
+    runs-on: ${{ inputs.os }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.CHECKOUT_TOKEN || github.token }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ inputs.python-version }}
+
+      - name: Install Rust toolchain
+        if: ${{ inputs.install-rust }}
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: ${{ inputs.rust-toolchain }}
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv sync ${{ inputs.uv-sync-args }}
+
+      - name: Run tests
+        run: uv run ${{ inputs.test-command }}
+
+      - name: Run mypy
+        if: ${{ inputs.mypy-command != '' }}
+        run: uv run ${{ inputs.mypy-command }}
+        continue-on-error: true
+
+      - name: Run ruff check
+        run: uv run ${{ inputs.ruff-check-command }}
+
+      - name: Run ruff format check
+        run: uv run ${{ inputs.ruff-format-command }}

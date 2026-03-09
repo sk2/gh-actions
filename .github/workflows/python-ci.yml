@@ -19,12 +19,19 @@ on:
         type: string
         default: "python -m pytest -q"
 
+    secrets:
+      GH_TOKEN:
+        description: Optional token if checkout needs it
+        required: false
+
 jobs:
   ci:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GH_TOKEN || github.token }}
 
       - name: Set up Python
         uses: actions/setup-python@v5
