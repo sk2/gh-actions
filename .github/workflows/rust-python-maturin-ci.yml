@@ -1,0 +1,83 @@
+name: Rust + Python (maturin) CI
+
+on:
+  workflow_call:
+    inputs:
+      python-version:
+        description: Python version to use
+        required: false
+        type: string
+        default: "3.11"
+      rust-toolchain:
+        description: Rust toolchain channel or version
+        required: false
+        type: string
+        default: stable
+      install-rust:
+        description: Install Rust toolchain
+        required: false
+        type: boolean
+        default: true
+      run-rust-tests:
+        description: Run cargo test
+        required: false
+        type: boolean
+        default: true
+      run-python-pytest:
+        description: Run python -m pytest
+        required: false
+        type: boolean
+        default: true
+      pytest-args:
+        description: Extra pytest args
+        required: false
+        type: string
+        default: "-q"
+      maturin-args:
+        description: Extra maturin develop args
+        required: false
+        type: string
+        default: "--release"
+
+jobs:
+  ci:
+    name: ci
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        if: ${{ inputs.install-rust }}
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: ${{ inputs.rust-toolchain }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ inputs.python-version }}
+
+      - name: Create virtualenv
+        run: python -m venv .venv
+
+      - name: Install Python test tooling
+        run: |
+          source .venv/bin/activate
+          python -m pip install --upgrade pip maturin pytest
+
+      - name: Build + install Python extension (editable)
+        run: |
+          source .venv/bin/activate
+          maturin develop ${{ inputs.maturin-args }}
+
+      - name: Run Rust tests
+        if: ${{ inputs.run-rust-tests }}
+        run: cargo test
+
+      - name: Run Python tests
+        if: ${{ inputs.run-python-pytest }}
+        run: |
+          source .venv/bin/activate
+          python -m pytest ${{ inputs.pytest-args }}

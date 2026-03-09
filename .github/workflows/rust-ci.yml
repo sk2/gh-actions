@@ -1,0 +1,35 @@
+name: Rust CI
+
+on:
+  workflow_call:
+    inputs:
+      rust-toolchain:
+        description: Rust toolchain channel or version
+        required: false
+        type: string
+        default: stable
+      cargo-command:
+        description: Cargo command to run
+        required: false
+        type: string
+        default: "test"
+      cargo-args:
+        description: Extra args for cargo command
+        required: false
+        type: string
+        default: ""
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: ${{ inputs.rust-toolchain }}
+
+      - name: Run cargo
+        run: cargo ${{ inputs.cargo-command }} ${{ inputs.cargo-args }}
